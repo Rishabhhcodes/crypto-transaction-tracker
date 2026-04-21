@@ -1,22 +1,35 @@
 import time
 import requests
 import json
+import os
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
+from dotenv import load_dotenv
 
-API_KEY = "YOUR_API_KEY"
+# =========================
+# LOAD ENV VARIABLES
+# =========================
+load_dotenv()
 
-WALLET = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+API_KEY = os.getenv("ETHERSCAN_API_KEY")
+WALLET = os.getenv("WALLET_ADDRESS")
+
+if not API_KEY or not WALLET:
+    raise ValueError("❌ Missing API_KEY or WALLET in .env")
 
 URL = f"https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address={WALLET}&startblock=0&endblock=99999999&sort=desc&apikey={API_KEY}"
 
+# =========================
+# CONNECT TO KAFKA
+# =========================
 print("⏳ Connecting to Kafka...")
 
 while True:
     try:
         producer = KafkaProducer(
             bootstrap_servers='kafka:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            retries=5
         )
         print("✅ Connected to Kafka")
         break
@@ -24,15 +37,26 @@ while True:
         print("⏳ Kafka not ready, retrying...")
         time.sleep(5)
 
+# =========================
+# MAIN LOOP
+# =========================
 seen_tx = set()
 
 while True:
     try:
-        response = requests.get(URL, timeout=20)
+        response = requests.get(URL, timeout=15)
+
+        # Handle HTTP errors
+        if response.status_code != 200:
+            print(f"❌ HTTP Error: {response.status_code}")
+            time.sleep(10)
+            continue
+
         data = response.json()
 
+        # Better debug output
         if data.get("status") != "1" or not data.get("result"):
-            print("⚠️ API issue:", data.get("message"))
+            print("⚠️ API issue:", data)
             time.sleep(10)
             continue
 
@@ -68,6 +92,7 @@ while True:
 
         print(f"✅ Sent {new_count} transactions")
 
+        # Prevent memory overflow
         if len(seen_tx) > 2000:
             seen_tx.clear()
 

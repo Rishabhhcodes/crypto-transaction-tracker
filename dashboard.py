@@ -35,9 +35,7 @@ df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
 eth_df = df[df["value"] > 0]
 token_df = df[df["is_token_tx"] == True]
 
-# ======================
 # Metrics
-# ======================
 latest = df.iloc[0]
 
 col1, col2, col3 = st.columns(3)
@@ -45,10 +43,7 @@ col1.metric("Total Transactions", len(df))
 col2.metric("Latest Value (ETH)", round(float(latest["value"]), 4))
 col3.metric("Token Transactions", int(df["is_token_tx"].sum()))
 
-# ======================
 # Charts
-# ======================
-
 df_sorted = df.sort_values("timestamp")
 
 # 📈 ETH Volume
@@ -67,9 +62,7 @@ tx_count = df_sorted.groupby(
 
 st.line_chart(tx_count)
 
-# ======================
 # 🐋 Whale Transactions
-# ======================
 st.subheader("🐋 Whale Transactions (>50 ETH)")
 
 whales = df[df["value"] > 50]
@@ -79,9 +72,7 @@ if whales.empty:
 else:
     st.dataframe(whales.head(10), use_container_width=True)
 
-# ======================
 # 🔍 Filter + Raw Data
-# ======================
 st.subheader("📄 Filter Transactions")
 
 min_value = st.slider("Minimum ETH value", 0.0, 100.0, 0.0)
