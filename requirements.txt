@@ -1,0 +1,6 @@
+kafka-python
+requests
+pyspark
+fastapi
+uvicorn
+psycopg2-binary
